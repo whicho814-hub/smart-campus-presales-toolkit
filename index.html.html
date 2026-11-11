@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧园区弱电智能化售前选型配单与容量测算系统</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .tab-btn-active {
+      background-color: #1e3a8a;
+      color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.25);
+    }
+    .cad-bg {
+      background-color: #0b132b;
+      background-image: 
+        linear-gradient(rgba(59, 130, 246, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.12) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg shadow-inner">
+          弱
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
+            智慧园区弱电智能化售前选型配单与容量测算系统
+            <span class="text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">v1.2 开源版</span>
+          </h1>
+          <p class="text-xs text-slate-400">支持华为数通 · 海康威视安防 · 洲明LED · 希沃平板 · 世邦广播全链路测算与BOM导出</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnOpenGuide" class="text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-lg transition">
+          💡 面试演示与部署速查卡
+        </button>
+        <button id="btnQuickExportCsv" class="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 py-1.5 rounded-lg transition">
+          📥 导出 BOM 报价单 (.csv)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="bg-white border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap gap-2">
+      <button data-tab="tab-ipc" class="nav-tab tab-btn-active text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+        1. 海康安防存储与华为PoE测算
+      </button>
+      <button data-tab="tab-av" class="nav-tab text-slate-600 hover:bg-slate-100 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+        2. 洲明大屏/希沃会议/世邦广播选型
+      </button>
+      <button data-tab="tab-cad" class="nav-tab text-slate-600 hover:bg-slate-100 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+        3. 园区VLAN拓扑与CAD弱电点位图
+      </button>
+      <button data-tab="tab-bom" class="nav-tab text-slate-600 hover:bg-slate-100 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+        4. 汇总 BOM 报价单与方案书生成
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+    <!-- TAB 1: Security & Network Calculator -->
+    <section id="tab-ipc" class="tab-panel space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Input Panel -->
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 class="font-bold text-slate-800 text-base">前端监控与组网参数输入</h2>
+            <span class="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">实时联动计算</span>
+          </div>
+
+          <!-- Camera Count -->
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <label for="ipcCount" class="font-medium text-slate-700">前端网络摄像机 (IPC) 数量</label>
+              <span class="font-bold text-blue-700"><span id="ipcCountVal">32</span> 路</span>
+            </div>
+            <input id="ipcCount" type="range" min="4" max="128" step="4" value="32" class="w-full accent-blue-600 cursor-pointer">
+            <div class="flex justify-between text-xs text-slate-400 mt-0.5">
+              <span>4路(小型)</span>
+              <span>32路(标准楼层)</span>
+              <span>64路(中大型)</span>
+              <span>128路(园区)</span>
+            </div>
+          </div>
+
+          <!-- Resolution & Codec -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="ipcRes" class="block text-xs font-medium text-slate-600 mb-1">摄像机分辨率</label>
+              <select id="ipcRes" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="2">1080P (200万像素)</option>
+                <option value="4" selected>2K (400万像素·主流)</option>
+                <option value="8">4K (800万超高清)</option>
+              </select>
+            </div>
+            <div>
+              <label for="ipcCodec" class="block text-xs font-medium text-slate-600 mb-1">视频编码格式</label>
+              <select id="ipcCodec" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="1" selected>H.265 (高效省空间·推荐)</option>
+                <option value="2">H.264 (传统编码·码率翻倍)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Storage Days & Single Disk Size -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="storeDays" class="block text-xs font-medium text-slate-600 mb-1">录像保存天数</label>
+              <select id="storeDays" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="7">7 天 (临时周转)</option>
+                <option value="15">15 天 (普通商业)</option>
+                <option value="30" selected>30 天 (政企/园区国标)</option>
+                <option value="60">60 天 (重点安防场所)</option>
+                <option value="90">90 天 (金融/高安全要求)</option>
+              </select>
+            </div>
+            <div>
+              <label for="diskSize" class="block text-xs font-medium text-slate-600 mb-1">单块监控硬盘容量</label>
+              <select id="diskSize" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="4">4 TB 监控级硬盘</option>
+                <option value="6">6 TB 监控级硬盘</option>
+                <option value="8" selected>8 TB 企业监控盘 (主流)</option>
+                <option value="10">10 TB 企业监控盘</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Camera Ratio & Max Cable Distance -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="ptzRatio" class="block text-xs font-medium text-slate-600 mb-1">红外球机占比 (其余为枪机/半球)</label>
+              <select id="ptzRatio" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="0.1" selected>10% 球机 + 90% 枪机/半球</option>
+                <option value="0.2">20% 球机 + 80% 枪机/半球</option>
+                <option value="0.3">30% 球机 + 70% 枪机/半球</option>
+              </select>
+            </div>
+            <div>
+              <label for="maxDist" class="block text-xs font-medium text-slate-600 mb-1">最远点位距弱电间距离</label>
+              <select id="maxDist" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="75" selected>≤ 90米 (六类网线PoE直连)</option>
+                <option value="150">&gt; 90米 (需加配光纤与光模块)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Preset Scenarios -->
+          <div class="pt-2 border-t border-slate-100">
+            <span class="block text-xs text-slate-500 mb-2">快速加载典型项目场景：</span>
+            <div class="flex flex-wrap gap-2">
+              <button data-preset="small" class="preset-btn text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1.5 rounded-md transition">
+                🏢 单层办公区 (16路/30天)
+              </button>
+              <button data-preset="medium" class="preset-btn text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1.5 rounded-md transition">
+                🏫 智慧校园楼宇 (32路/30天)
+              </button>
+              <button data-preset="large" class="preset-btn text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1.5 rounded-md transition">
+                🏭 产业园区全覆盖 (64路/60天)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output & Formula Panel -->
+        <div class="lg:col-span-7 space-y-4">
+          <!-- KPI Metric Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">单路码率 / 日容量</div>
+              <div class="text-lg font-bold text-slate-900 mt-1" id="outBitrate">4 Mbps</div>
+              <div class="text-xs text-blue-600 font-medium mt-0.5" id="outDailyGb">≈ 42.19 GB/天</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">总存储需求 (含10%冗余)</div>
+              <div class="text-lg font-bold text-blue-700 mt-1" id="outTotalTb">43.55 TB</div>
+              <div class="text-xs text-slate-500 mt-0.5" id="outDiskCount">需配 6 块 8TB 硬盘</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">接入总带宽 / PoE功率</div>
+              <div class="text-lg font-bold text-emerald-700 mt-1" id="outBandwidth">128 Mbps</div>
+              <div class="text-xs text-slate-500 mt-0.5" id="outPoePower">PoE预算: 456 W</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">推荐海康NVR & 华为交换机</div>
+              <div class="text-sm font-bold text-slate-900 mt-1" id="outNvrModel">32路 8盘位 NVR ×1</div>
+              <div class="text-xs text-indigo-600 font-medium mt-0.5" id="outSwitchModel">华为24口PoE ×2台</div>
+            </div>
+          </div>
+
+          <!-- Formula Explanation Box (Interview Lifesaver) -->
+          <div class="bg-blue-950 text-slate-100 rounded-xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                <span>📐 售前工程师计算公式实时推导（面试被问“怎么算出来的”直接念这里）</span>
+              </h3>
+              <span class="text-xs bg-blue-900 text-blue-200 px-2 py-0.5 rounded">H.265/PoE 标准公式</span>
+            </div>
+            <div class="text-xs sm:text-sm space-y-2 text-slate-200 leading-relaxed font-mono bg-slate-900/80 p-3.5 rounded-lg border border-blue-800/50">
+              <div id="formulaStep1">1. 单路每天录像容量 = 码率(4Mbps) ÷ 8 × 3600秒 × 24小时 ÷ 1024 = 42.19 GB/天</div>
+              <div id="formulaStep2">2. 净存储总容量 = 42.19 GB × 32路 × 30天 ÷ 1024 = 39.55 TB（加10%格式化冗余后为 43.51 TB）</div>
+              <div id="formulaStep3">3. 硬盘与NVR配单 = 向上取整(43.51 TB ÷ 单盘8TB) = 6 块硬盘 → 匹配海康 8盘位 NVR (DS-7932N-R4)</div>
+              <div id="formulaStep4">4. 华为PoE交换机核算 = 枪机按12W、球机按25W计算，总PoE功率 423W；单台24口PoE交换机留20%余量实际接20路摄像头，故配置 2 台华为 S5735-L24P4S-A1 千兆PoE交换机。</div>
+            </div>
+          </div>
+
+          <!-- Recommended Hardware Breakdown Card -->
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-sm mb-3">当前安防与网络子系统自动选型结果（海康威视 + 华为数通）</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-500 bg-slate-50">
+                    <th class="py-2 px-3">设备角色</th>
+                    <th class="py-2 px-3">品牌与推荐型号</th>
+                    <th class="py-2 px-3">选型依据说明</th>
+                    <th class="py-2 px-3 text-right">配单数量</th>
+                  </tr>
+                </thead>
+                <tbody id="ipcSubTable" class="divide-y divide-slate-100">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Multimedia, LED & Broadcast Selector -->
+    <section id="tab-av" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <h2 class="font-bold text-slate-800 text-base">智慧办公/报告厅多媒体与广播参数</h2>
+            <p class="text-xs text-slate-500 mt-0.5">自动匹配洲明 LED 大屏、希沃交互平板与世邦 IP 广播</p>
+          </div>
+
+          <div>
+            <label for="roomType" class="block text-xs font-medium text-slate-600 mb-1">目标建设场景类型</label>
+            <select id="roomType" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="meeting">中小型会议室 / 智慧教室 (首选希沃交互平板)</option>
+              <option value="hall" selected>大型多功能报告厅 / 展厅指挥中心 (首选洲明小间距LED + 希沃协同)</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <label for="roomArea" class="font-medium text-slate-700">会议室 / 报告厅面积</label>
+              <span class="font-bold text-blue-700"><span id="roomAreaVal">120</span> ㎡</span>
+            </div>
+            <input id="roomArea" type="range" min="30" max="400" step="10" value="120" class="w-full accent-blue-600 cursor-pointer">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="ledPitch" class="block text-xs font-medium text-slate-600 mb-1">洲明 LED 点间距选型</label>
+              <select id="ledPitch" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="1.25">P1.25 (超高清指挥中心)</option>
+                <option value="1.53" selected>P1.53 (主流室内高清报告厅)</option>
+                <option value="1.86">P1.86 (高性价比大空间报告厅)</option>
+              </select>
+            </div>
+            <div>
+              <label for="seewoRooms" class="block text-xs font-medium text-slate-600 mb-1">配套中小型会议室/教室间数</label>
+              <select id="seewoRooms" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="2">2 间标准会议室</option>
+                <option value="4" selected>4 间标准会议室</option>
+                <option value="8">8 间智慧教室/讨论室</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <label for="sponZones" class="font-medium text-slate-700">世邦 (SPON) 公共广播走廊/公共分区数</label>
+              <span class="font-bold text-blue-700"><span id="sponZonesVal">4</span> 个分区</span>
+            </div>
+            <input id="sponZones" type="range" min="1" max="12" step="1" value="4" class="w-full accent-blue-600 cursor-pointer">
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">洲明 LED 主屏推荐规格</div>
+              <div class="text-base font-bold text-blue-700 mt-1" id="outLedSpec">3.84m × 2.16m (16:9)</div>
+              <div class="text-xs text-slate-500 mt-0.5" id="outLedModules">320×180mm标准模组: 144块</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">希沃 (Seewo) 交互平板</div>
+              <div class="text-base font-bold text-indigo-700 mt-1" id="outSeewoSpec">86寸 4K 会议平板 ×4台</div>
+              <div class="text-xs text-slate-500 mt-0.5">含无线投屏器与移动推车</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500">世邦 (SPON) IP 广播功放</div>
+              <div class="text-base font-bold text-emerald-700 mt-1" id="outSponSpec">24只吸顶喇叭 / 360W功放</div>
+              <div class="text-xs text-slate-500 mt-0.5">按喇叭总功率×1.5倍冗余配比</div>
+            </div>
+          </div>
+
+          <div class="bg-blue-950 text-slate-100 rounded-xl p-5 shadow-sm space-y-2">
+            <h3 class="text-sm font-bold text-amber-300">💡 洲明 + 希沃 + 世邦三大品牌售前选型口诀（面试直接拿来答）</h3>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+              • <strong>洲明 LED 大屏</strong>：室内常用小间距 <code>P1.25 / P1.53 / P1.86</code>（P代表像素点间距毫米数，最佳观看距离 ≈ 点间距 × 2米）。采用 <code>320mm × 180mm</code> 标准16:9压铸铝箱体/模组拼接，搭配视频拼接处理器。<br>
+              • <strong>希沃 (Seewo) 会议平板</strong>：50㎡以内中小型会议室不装LED大屏，直接推希沃 65/75/86 寸交互平板（内置双系统、电子白板、无线传屏器），部署快、预算省。<br>
+              • <strong>世邦 (SPON) IP网络广播</strong>：机房放 IP 广播主机+寻呼话筒，各楼层走廊放 3W/6W 吸顶音箱，<strong>定压功放功率 = 喇叭总瓦数 × 1.5 倍安全冗余</strong>，并支持消防强切报警联动。
+            </p>
+          </div>
+
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-sm mb-3">多媒体显示与公共广播配单明细（洲明 + 希沃 + 世邦）</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-500 bg-slate-50">
+                    <th class="py-2 px-3">系统模块</th>
+                    <th class="py-2 px-3">品牌与推荐型号</th>
+                    <th class="py-2 px-3">核心技术参数</th>
+                    <th class="py-2 px-3 text-right">配单数量</th>
+                  </tr>
+                </thead>
+                <tbody id="avSubTable" class="divide-y divide-slate-100">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Network Topology & CAD Floor Plan -->
+    <section id="tab-cad" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Three-tier Network Topology & VLAN Table -->
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <h2 class="font-bold text-slate-800 text-base">园区三层网络拓扑与 VLAN 隔离规划</h2>
+            <p class="text-xs text-slate-500 mt-0.5">点击下方拓扑节点可查看售前面试必考配置原理</p>
+          </div>
+
+          <!-- Interactive SVG Topology -->
+          <div class="bg-slate-50 rounded-xl border border-slate-200 p-3">
+            <svg viewBox="0 0 420 260" class="w-full h-auto">
+              <!-- Links -->
+              <line x1="210" y1="50" x2="115" y2="120" stroke="#64748b" stroke-width="2" stroke-dasharray="4"/>
+              <line x1="210" y1="50" x2="305" y2="120" stroke="#2563eb" stroke-width="2.5"/>
+              <line x1="115" y1="145" x2="65" y2="210" stroke="#64748b" stroke-width="2"/>
+              <line x1="305" y1="145" x2="210" y2="210" stroke="#2563eb" stroke-width="2"/>
+              <line x1="305" y1="145" x2="355" y2="210" stroke="#059669" stroke-width="2"/>
+
+              <!-- Core Switch -->
+              <g class="topo-node cursor-pointer" data-node="core">
+                <rect x="135" y="15" width="150" height="38" rx="6" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2"/>
+                <text x="210" y="32" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">核心层：华为 S5735 三层交换机</text>
+                <text x="210" y="46" text-anchor="middle" fill="#93c5fd" font-size="9">配置 VLANIF 虚拟网关 + ACL 隔离</text>
+              </g>
+
+              <!-- Aggregation Switches -->
+              <g class="topo-node cursor-pointer" data-node="office-sw">
+                <rect x="45" y="110" width="140" height="36" rx="6" fill="#334155"/>
+                <text x="115" y="126" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold">办公接入交换机 (Trunk)</text>
+                <text x="115" y="139" text-anchor="middle" fill="#cbd5e1" font-size="8.5">VLAN 10: 192.168.10.0/24</text>
+              </g>
+
+              <g class="topo-node cursor-pointer" data-node="poe-sw">
+                <rect x="230" y="110" width="150" height="36" rx="6" fill="#1d4ed8"/>
+                <text x="305" y="126" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold">弱电PoE接入交换机 (华为)</text>
+                <text x="305" y="139" text-anchor="middle" fill="#bfdbfe" font-size="8.5">802.3af/at 一线供电+传视频</text>
+              </g>
+
+              <!-- Endpoints -->
+              <g class="topo-node cursor-pointer" data-node="pc">
+                <rect x="15" y="200" width="105" height="42" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+                <text x="67" y="218" text-anchor="middle" fill="#1e293b" font-size="10" font-weight="bold">行政办公电脑/AP</text>
+                <text x="67" y="232" text-anchor="middle" fill="#475569" font-size="8.5">VLAN 10 (Access口)</text>
+              </g>
+
+              <g class="topo-node cursor-pointer" data-node="ipc">
+                <rect x="145" y="200" width="130" height="42" rx="6" fill="#eff6ff" stroke="#3b82f6"/>
+                <text x="210" y="218" text-anchor="middle" fill="#1e3a8a" font-size="10" font-weight="bold">海康IPC摄像机 + NVR</text>
+                <text x="210" y="232" text-anchor="middle" fill="#1d4ed8" font-size="8.5">VLAN 20 监控专网隔离</text>
+              </g>
+
+              <g class="topo-node cursor-pointer" data-node="av">
+                <rect x="295" y="200" width="115" height="42" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+                <text x="352" y="218" text-anchor="middle" fill="#065f46" font-size="10" font-weight="bold">希沃平板/世邦IP广播</text>
+                <text x="352" y="232" text-anchor="middle" fill="#047857" font-size="8.5">VLAN 30 多媒体专网</text>
+              </g>
+            </svg>
+          </div>
+
+          <div id="topoDetailBox" class="bg-blue-50 border border-blue-200 rounded-lg p-3.5 text-xs text-slate-700 leading-relaxed">
+            <strong class="text-blue-900">📌 核心三层交换机（点击上方节点切换讲解）：</strong> 汇聚所有楼层交换机（交换机之间用 <strong>Trunk 口</strong>透传多个 VLAN），在核心交换机上配置 <code>VLANIF 10 / 20 / 30</code> 作为三个网段的网关，并下发 <code>ACL 访问控制策略</code>，禁止访客或普通办公电脑随意访问海康监控专网（VLAN 20），防止视频大流量引发广播风暴。
+          </div>
+        </div>
+
+        <!-- Right: Interactive CAD Floor Plan -->
+        <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 class="font-bold text-slate-800 text-base">标准办公楼层 CAD 弱电平面点位布局图 (模拟 AutoCAD 图层)</h2>
+              <p class="text-xs text-slate-500 mt-0.5">支持勾选开关 CAD 图层（面试官问 CAD 怎么操作，就按这四个图层回答）</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <label class="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded cursor-pointer">
+                <input type="checkbox" id="chkLayerIpc" checked class="accent-blue-600">
+                <span>📹 安防监控层</span>
+              </label>
+              <label class="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded cursor-pointer">
+                <input type="checkbox" id="chkLayerAv" checked class="accent-emerald-600">
+                <span>🖥️ 会议与广播层</span>
+              </label>
+              <label class="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded cursor-pointer">
+                <input type="checkbox" id="chkLayerCable" checked class="accent-amber-500">
+                <span>📏 弱电桥架与90米测距层</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- CAD Canvas -->
+          <div class="cad-bg rounded-xl p-4 border border-slate-700 text-white">
+            <svg viewBox="0 0 680 340" class="w-full h-auto">
+              <!-- Layer 0: Architectural Base Walls (Always On) -->
+              <g id="cad-walls" stroke="#64748b" stroke-width="2" fill="none">
+                <rect x="20" y="20" width="640" height="300" stroke="#94a3b8" stroke-width="3"/>
+                <!-- Rooms Top Row -->
+                <line x1="220" y1="20" x2="220" y2="140"/>
+                <line x1="460" y1="20" x2="460" y2="140"/>
+                <line x1="20" y1="140" x2="660" y2="140"/>
+                <!-- Corridor Center (y: 140 to 200) -->
+                <line x1="20" y1="200" x2="660" y2="200"/>
+                <!-- Rooms Bottom Row -->
+                <line x1="160" y1="200" x2="160" y2="320"/>
+                <line x1="360" y1="200" x2="360" y2="320"/>
+                <line x1="520" y1="200" x2="520" y2="320"/>
+
+                <!-- Room Labels -->
+                <text x="120" y="75" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">101 大型多功能报告厅 (120㎡)</text>
+                <text x="340" y="75" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">102 开放式行政办公区</text>
+                <text x="560" y="75" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">103 智慧会议室 (希沃)</text>
+                <text x="340" y="174" fill="#64748b" font-size="11" text-anchor="middle" stroke="none">公共主走廊 (吊顶弱电桥架主干路由)</text>
+                <text x="90" y="265" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle" stroke="none">⚡ 弱电间 (IDF机柜)</text>
+                <text x="260" y="265" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">电梯厅与主出入口大厅</text>
+                <text x="440" y="265" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">104 财务与档案室</text>
+                <text x="590" y="265" fill="#94a3b8" font-size="12" text-anchor="middle" stroke="none">东侧消防疏散通道</text>
+              </g>
+
+              <!-- Layer 1: Cable Tray & Distance Dimension (PL & DI commands) -->
+              <g id="cad-cable">
+                <!-- Weak current rack in IDF -->
+                <rect x="45" y="215" width="90" height="28" fill="#0284c7" stroke="#bae6fd" stroke-width="1.5"/>
+                <text x="90" y="233" fill="#ffffff" font-size="9.5" text-anchor="middle">华为PoE交换机+海康NVR</text>
+                <!-- Main Cable Tray Line -->
+                <polyline points="90,215 90,160 630,160" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6,4"/>
+                <!-- Distance Ruler DI -->
+                <line x1="90" y1="188" x2="630" y2="188" stroke="#fbbf24" stroke-width="1.5"/>
+                <text x="360" y="184" fill="#fde68a" font-size="10" text-anchor="middle">📏 AutoCAD [DI测距] 最远点位链路 = 68米 (≤90米六类网线PoE标准极限)</text>
+              </g>
+
+              <!-- Layer 2: Security Cameras (Hikvision IPC) -->
+              <g id="cad-ipc">
+                <!-- Corridor Bullet Cameras -->
+                <circle cx="40" cy="155" r="9" fill="#2563eb" stroke="#93c5fd" stroke-width="1.5"/>
+                <text x="40" y="158" fill="#fff" font-size="8" text-anchor="middle">枪1</text>
+
+                <circle cx="635" cy="155" r="9" fill="#2563eb" stroke="#93c5fd" stroke-width="1.5"/>
+                <text x="635" y="158" fill="#fff" font-size="8" text-anchor="middle">枪2</text>
+
+                <circle cx="535" cy="300" r="9" fill="#2563eb" stroke="#93c5fd" stroke-width="1.5"/>
+                <text x="535" y="303" fill="#fff" font-size="8" text-anchor="middle">枪3</text>
+
+                <!-- Lobby PTZ Dome Camera -->
+                <circle cx="260" cy="225" r="11" fill="#dc2626" stroke="#fca5a5" stroke-width="1.5"/>
+                <text x="260" y="228" fill="#fff" font-size="8" text-anchor="middle">球机</text>
+
+                <!-- Indoor Dome Cameras -->
+                <circle cx="380" cy="220" r="9" fill="#0284c7" stroke="#bae6fd" stroke-width="1.5"/>
+                <text x="380" y="223" fill="#fff" font-size="8" text-anchor="middle">半球</text>
+
+                <circle cx="240" cy="40" r="9" fill="#0284c7" stroke="#bae6fd" stroke-width="1.5"/>
+                <text x="240" y="43" fill="#fff" font-size="8" text-anchor="middle">半球</text>
+              </g>
+
+              <!-- Layer 3: Multimedia & Broadcast (Unilumin LED, Seewo, SPON) -->
+              <g id="cad-av">
+                <!-- Unilumin LED Screen in Room 101 -->
+                <rect x="28" y="40" width="12" height="75" fill="#10b981" stroke="#a7f3d0" stroke-width="1.5"/>
+                <text x="85" y="115" fill="#6ee7b7" font-size="9.5" text-anchor="middle">洲明 P1.53 LED主屏</text>
+
+                <!-- Seewo Panel in Room 103 -->
+                <rect x="642" y="50" width="10" height="55" fill="#8b5cf6" stroke="#ddd6fe" stroke-width="1.5"/>
+                <text x="585" y="115" fill="#c4b5fd" font-size="9.5" text-anchor="middle">希沃 86寸交互平板</text>
+
+                <!-- SPON Ceiling Speakers in Corridor -->
+                <circle cx="170" cy="170" r="7" fill="#059669" stroke="#a7f3d0" stroke-width="1.5"/>
+                <text x="170" y="173" fill="#fff" font-size="7" text-anchor="middle">SP</text>
+                <circle cx="340" cy="170" r="7" fill="#059669" stroke="#a7f3d0" stroke-width="1.5"/>
+                <text x="340" y="173" fill="#fff" font-size="7" text-anchor="middle">SP</text>
+                <circle cx="510" cy="170" r="7" fill="#059669" stroke="#a7f3d0" stroke-width="1.5"/>
+                <text x="510" y="173" fill="#fff" font-size="7" text-anchor="middle">SP</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600">
+            <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
+              <strong class="text-slate-900">1. 图层管理 (LA)</strong>：拿到建筑底图先关掉家具暖通层，只留墙体门窗。
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
+              <strong class="text-slate-900">2. 插入图块 (I)</strong>：走廊放海康枪机、大厅放球机、室内放半球与希沃大屏。
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
+              <strong class="text-slate-900">3. 桥架连线 (PL)</strong>：用多段线沿走廊吊顶绘制弱电线槽走向汇聚至弱电间。
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
+              <strong class="text-slate-900">4. 距离测量 (DI)</strong>：量最远点位到机柜≤90米用网线，超90米改用光纤。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Full BOM Table & Solution Proposal Export -->
+    <section id="tab-bom" class="tab-panel hidden space-y-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h2 class="font-bold text-slate-800 text-base">智慧园区弱电集成项目汇总设备配置报价单 (BOM 表)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">已自动汇总华为、海康威视、洲明、希沃、世邦五大核心产品线选型数据</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <span class="text-xs text-slate-500 block">项目设备预估总造价</span>
+              <span id="bomGrandTotal" class="text-lg font-bold text-blue-700">¥ 168,500</span>
+            </div>
+            <button id="btnCopyProposal" class="text-xs bg-slate-800 hover:bg-slate-700 text-white font-medium px-3.5 py-2 rounded-lg transition">
+              📋 复制《初步技术方案书》全文
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm border-collapse">
+            <thead>
+              <tr class="border-b-2 border-slate-200 text-slate-600 bg-slate-50">
+                <th class="py-2.5 px-3">序号</th>
+                <th class="py-2.5 px-3">分项系统</th>
+                <th class="py-2.5 px-3">品牌</th>
+                <th class="py-2.5 px-3">设备名称与推荐型号</th>
+                <th class="py-2.5 px-3">核心技术参数说明 (正偏离标准)</th>
+                <th class="py-2.5 px-3 text-right">数量</th>
+                <th class="py-2.5 px-3 text-right">参考单价</th>
+                <th class="py-2.5 px-3 text-right">小计金额</th>
+              </tr>
+            </thead>
+            <tbody id="fullBomBody" class="divide-y divide-slate-100">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for Interview & GitHub Guide -->
+  <div id="guideModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base">🚀 3分钟上传 GitHub 指南 & 明日面试定心丸</h3>
+        <button id="btnCloseGuide" class="text-slate-400 hover:text-slate-600 text-sm font-bold px-2 py-1">✕ 关闭</button>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-700 space-y-3 leading-relaxed">
+        <p class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 rounded-lg font-medium">
+          ✅ <strong>好消息：我现在发给你的这个网页，就是你简历里写的第1个项目《智慧园区弱电智能化售前选型配单与容量测算系统》的完整成品！</strong>
+        </p>
+        <p><strong>第一步（今晚花 2 分钟熟悉界面）：</strong> 点一点上面的滑块和 4 个标签页，看看它是怎么算海康硬盘容量、华为 PoE 交换机、洲明大屏模组数，以及怎么开关 CAD 图层的。你点过一遍，明天面试官问起时你脑子里就有真实画面了，绝对不会心虚！</p>
+        <p><strong>第二步（可选，3 分钟上传 GitHub）：</strong> 如果你想在 GitHub 上留个真链接，只需登录你的 GitHub → 点击右上角 <code>+</code> 号选择 <strong>New repository</strong> → 名字填 <code>smart-campus-presales-toolkit</code> → 点击 <strong>uploading an existing file</strong>，把这个 HTML 文件改名为 <code>index.html</code> 拖进去提交即可！哪怕今晚不上传，明天直接把文件存手机或平板里，也完全够用。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastMsg" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs sm:text-sm px-4 py-2.5 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+    操作成功
+  </div>
+
+  <script>
+    const state = {
+      ipcCount: 32,
+      ipcRes: 4, // 2Mbps, 4Mbps, 8Mbps base under H.265
+      ipcCodec: 1, // 1 for H.265, 2 for H.264
+      storeDays: 30,
+      diskSize: 8,
+      ptzRatio: 0.1,
+      maxDist: 75,
+      roomType: 'hall',
+      roomArea: 120,
+      ledPitch: 1.53,
+      seewoRooms: 4,
+      sponZones: 4,
+      bomItems: []
+    };
+
+    const topoDescriptions = {
+      'core': '📌 核心三层交换机（华为 S5735-S24T4X）：汇聚所有楼层接入交换机（交换机之间用 Trunk 口透传多个 VLAN），在核心交换机上配置 VLANIF 10 / 20 / 30 虚拟接口作为三个网段的网关，并下发 ACL 访问控制策略，将海康监控网与办公网安全隔离。',
+      'office-sw': '📌 办公网接入交换机：连接行政办公电脑、打印机与无线 AP，端口配置为 Access 模式并划入 VLAN 10（192.168.10.0/24），保障日常办公带宽不受监控视频流冲击。',
+      'poe-sw': '📌 华为弱电 PoE 接入交换机（S5735-L24P4S-A1）：支持 IEEE 802.3af/at 标准（单口最大 30W，整机 PoE 功率 380W），通过一根六类网线同时为海康摄像机提供电源与视频传输，省去前端强电布线成本。',
+      'pc': '📌 办公终端与无线 AP（VLAN 10）：通过核心交换机 DHCP 服务自动获取 IP 地址，与监控内网逻辑隔离。',
+      'ipc': '📌 海康威视 IPC 摄像机与 NVR 存储专网（VLAN 20）：前端枪机/球机采用 H.265 编码推流至海康 NVR 硬盘录像机，全部封闭在 VLAN 20 专网内高速传输。',
+      'av': '📌 智慧会议与世邦 IP 广播专网（VLAN 30）：承载希沃会议平板无线投屏与世邦 IP 网络广播音频流，保障音视频低延迟同步。'
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById('toastMsg');
+      el.textContent = msg;
+      el.classList.remove('opacity-0');
+      setTimeout(() => el.classList.add('opacity-0'), 2600);
+    }
+
+    function calculateAll() {
+      // 1. Security & Network math
+      const bitrateMbps = state.ipcRes * state.ipcCodec;
+      const dailyGbPerCam = (bitrateMbps / 8) * 3600 * 24 / 1024;
+      const rawTotalTb = (dailyGbPerCam * state.ipcCount * state.storeDays) / 1024;
+      const totalTbWithRedundancy = rawTotalTb * 1.1; // 10% redundancy
+      const diskCount = Math.max(1, Math.ceil(totalTbWithRedundancy / state.diskSize));
+
+      const ptzCount = Math.max(1, Math.round(state.ipcCount * state.ptzRatio));
+      const bulletCount = state.ipcCount - ptzCount;
+
+      const totalBandwidthMbps = state.ipcCount * bitrateMbps;
+      const poePowerWatts = bulletCount * 12 + ptzCount * 24;
+
+      // Switch sizing: 20 cameras per 24-port PoE switch (leaving 4 ports margin)
+      const poeSwitchCount = Math.max(1, Math.ceil(state.ipcCount / 20));
+
+      // NVR sizing
+      let nvrModel = '海康 DS-7816N-R2 (16路2盘位)';
+      let nvrBays = 2;
+      let nvrPrice = 1600;
+      if (state.ipcCount > 32 || diskCount > 8) {
+        nvrModel = '海康 DS-8664N-I8 (64路8盘位企业级)';
+        nvrBays = 8;
+        nvrPrice = 5800;
+      } else if (state.ipcCount > 16 || diskCount > 4) {
+        nvrModel = '海康 DS-7932N-R4 (32路4/8盘位)';
+        nvrBays = 8;
+        nvrPrice = 3200;
+      } else if (diskCount > 2) {
+        nvrModel = '海康 DS-7816N-R4 (16路4盘位)';
+        nvrBays = 4;
+        nvrPrice = 2200;
+      }
+      const nvrUnits = Math.max(Math.ceil(state.ipcCount / 64), Math.ceil(diskCount / nvrBays));
+
+      // Update Tab 1 UI
+      document.getElementById('ipcCountVal').textContent = state.ipcCount;
+      document.getElementById('outBitrate').textContent = bitrateMbps + ' Mbps';
+      document.getElementById('outDailyGb').textContent = '≈ ' + dailyGbPerCam.toFixed(2) + ' GB/天';
+      document.getElementById('outTotalTb').textContent = totalTbWithRedundancy.toFixed(2) + ' TB';
+      document.getElementById('outDiskCount').textContent = '需配 ' + diskCount + ' 块 ' + state.diskSize + 'TB 硬盘';
+      document.getElementById('outBandwidth').textContent = totalBandwidthMbps + ' Mbps';
+      document.getElementById('outPoePower').textContent = 'PoE预算: ' + poePowerWatts + ' W';
+      document.getElementById('outNvrModel').textContent = nvrModel.split(' ')[1] + ' ×' + nvrUnits + '台';
+      document.getElementById('outSwitchModel').textContent = '华为24口PoE ×' + poeSwitchCount + '台';
+
+      document.getElementById('formulaStep1').textContent =
+        `1. 单路每天录像容量 = 码率(${bitrateMbps}Mbps) ÷ 8 × 3600秒 × 24小时 ÷ 1024 = ${dailyGbPerCam.toFixed(2)} GB/天`;
+      document.getElementById('formulaStep2').textContent =
+        `2. 净存储总容量 = ${dailyGbPerCam.toFixed(2)} GB × ${state.ipcCount}路 × ${state.storeDays}天 ÷ 1024 = ${rawTotalTb.toFixed(2)} TB（加10%冗余后为 ${totalTbWithRedundancy.toFixed(2)} TB）`;
+      document.getElementById('formulaStep3').textContent =
+        `3. 硬盘与NVR配单 = 向上取整(${totalTbWithRedundancy.toFixed(2)} TB ÷ 单盘${state.diskSize}TB) = ${diskCount} 块硬盘 → 匹配 ${nvrModel} × ${nvrUnits} 台`;
+      document.getElementById('formulaStep4').textContent =
+        `4. 华为PoE交换机核算 = 枪机(${bulletCount}路×12W) + 球机(${ptzCount}路×24W) = ${poePowerWatts}W；按单台24口PoE接20路冗余标准，配置 ${poeSwitchCount} 台华为 S5735-L24P4S-A1。`;
+
+      // 2. Multimedia & Broadcast math
+      document.getElementById('roomAreaVal').textContent = state.roomArea;
+      document.getElementById('sponZonesVal').textContent = state.sponZones;
+
+      // LED dimensions based on room area
+      const cols = state.roomType === 'hall' ? (state.roomArea >= 180 ? 15 : 12) : 8;
+      const rows = Math.round(cols * (9 / 16) * (320 / 180));
+      const ledWidthM = (cols * 0.32).toFixed(2);
+      const ledHeightM = (rows * 0.18).toFixed(2);
+      const ledModules = cols * rows;
+
+      const seewoSize = state.roomArea >= 100 ? '86寸' : '75寸';
+      const speakerCount = state.sponZones * 6;
+      const rawSpeakerWatts = speakerCount * 10; // 10W per ceiling speaker
+      const ampPowerWatts = Math.ceil((rawSpeakerWatts * 1.5) / 120) * 120;
+
+      document.getElementById('outLedSpec').textContent =
+        state.roomType === 'hall' ? `${ledWidthM}m × ${ledHeightM}m (P${state.ledPitch})` : '中小会议室免配LED大屏';
+      document.getElementById('outLedModules').textContent =
+        state.roomType === 'hall' ? `320×180mm标准模组: ${ledModules}块` : '直接采用希沃交互平板方案';
+      document.getElementById('outSeewoSpec').textContent = `${seewoSize} 4K 会议平板 ×${state.seewoRooms}台`;
+      document.getElementById('outSponSpec').textContent = `${speakerCount}只吸顶喇叭 / ${ampPowerWatts}W功放`;
+
+      // Build unified BOM items
+      const bom = [
+        {
+          sys: '智能安防监控',
+          brand: '海康威视',
+          model: `DS-2CD2T47EWD (${state.ipcRes}MP 星光级红外枪机)`,
+          spec: `${state.ipcRes}00万像素, H.265编码, PoE供电, IP67防尘防水`,
+          qty: bulletCount,
+          unitPrice: state.ipcRes === 8 ? 680 : 420
+        },
+        {
+          sys: '智能安防监控',
+          brand: '海康威视',
+          model: `DS-2DE7425IW-AE (${state.ipcRes}MP 25倍光学变焦球机)`,
+          spec: `${state.ipcRes}00万像素, 150米红外补光, 支持区域入侵侦测`,
+          qty: ptzCount,
+          unitPrice: 1850
+        },
+        {
+          sys: '智能安防监控',
+          brand: '海康威视',
+          model: nvrModel,
+          spec: `支持 H.265 解码, 4K 高清输出, 满足 ${state.storeDays} 天录像存储`,
+          qty: nvrUnits,
+          unitPrice: nvrPrice
+        },
+        {
+          sys: '智能安防监控',
+          brand: '海康威视',
+          model: `HK-${state.diskSize}TB-7200 监控级专用硬盘`,
+          spec: `${state.diskSize}TB 7×24小时企业级安防流媒体录像盘`,
+          qty: diskCount,
+          unitPrice: state.diskSize * 165
+        },
+        {
+          sys: '园区数通网络',
+          brand: '华为 (Huawei)',
+          model: 'S5735-S24T4X-A1 三层核心千兆交换机',
+          spec: '24个千兆电口+4个万兆SFP+光口, 支持VLANIF路由与ACL策略',
+          qty: 1,
+          unitPrice: 4600
+        },
+        {
+          sys: '园区数通网络',
+          brand: '华为 (Huawei)',
+          model: 'S5735-L24P4S-A1 24口千兆PoE+接入交换机',
+          spec: `支持802.3af/at标准, 整机PoE功率380W, 满足${poePowerWatts}W供电预算`,
+          qty: poeSwitchCount,
+          unitPrice: 2450
+        }
+      ];
+
+      if (state.maxDist > 90) {
+        bom.push({
+          sys: '园区数通网络',
+          brand: '华为 (Huawei)',
+          model: 'SFP-GE-LX-SM1310 千兆单模光模块 + 室外光缆',
+          spec: '解决 >90米 超远距离监控点位光纤上联传输需求',
+          qty: poeSwitchCount * 2,
+          unitPrice: 380
+        });
+      }
+
+      if (state.roomType === 'hall') {
+        bom.push({
+          sys: '大屏显示系统',
+          brand: '洲明 (Unilumin)',
+          model: `Umini P${state.ledPitch} 室内全彩小间距LED显示屏`,
+          spec: `整屏尺寸 ${ledWidthM}m×${ledHeightM}m, 320×180mm标准模组共${ledModules}块, 含视频处理器`,
+          qty: ledModules,
+          unitPrice: state.ledPitch < 1.5 ? 480 : 350
+        });
+      }
+
+      bom.push(
+        {
+          sys: '智慧会议系统',
+          brand: '希沃 (Seewo)',
+          model: `MC${seewoSize.replace('寸', '')}A 交互式智能会议平板 (${seewoSize})`,
+          spec: '4K防眩光触控屏, 内置双系统、智能白板与无线传屏器',
+          qty: state.seewoRooms,
+          unitPrice: seewoSize === '86寸' ? 11800 : 7900
+        },
+        {
+          sys: '公共广播系统',
+          brand: '世邦 (SPON)',
+          model: `XC-9000 IP网络广播主机 + ${ampPowerWatts}W 定压功放`,
+          spec: `管理 ${state.sponZones} 个独立广播分区, 预留1.5倍功放功率冗余, 支持消防联动`,
+          qty: 1,
+          unitPrice: 4200
+        },
+        {
+          sys: '公共广播系统',
+          brand: '世邦 (SPON)',
+          model: 'NAP-2603 10W 室内吸顶式网络同轴音箱',
+          spec: `覆盖 ${state.sponZones} 个办公走廊与公共大厅分区, 语音清晰度高`,
+          qty: speakerCount,
+          unitPrice: 160
+        }
+      );
+
+      state.bomItems = bom;
+
+      // Populate Tab 1 Sub-table
+      const ipcSubBody = document.getElementById('ipcSubTable');
+      ipcSubBody.innerHTML = bom
+        .filter(item => item.sys === '智能安防监控' || item.sys === '园区数通网络')
+        .map(item => `
+          <tr>
+            <td class="py-2 px-3 font-medium text-slate-700">${item.sys}</td>
+            <td class="py-2 px-3 font-semibold text-blue-900">${item.brand} · ${item.model}</td>
+            <td class="py-2 px-3 text-slate-600">${item.spec}</td>
+            <td class="py-2 px-3 text-right font-bold text-slate-900">${item.qty}</td>
+          </tr>
+        `).join('');
+
+      // Populate Tab 2 Sub-table
+      const avSubBody = document.getElementById('avSubTable');
+      avSubBody.innerHTML = bom
+        .filter(item => item.sys !== '智能安防监控' && item.sys !== '园区数通网络')
+        .map(item => `
+          <tr>
+            <td class="py-2 px-3 font-medium text-slate-700">${item.sys}</td>
+            <td class="py-2 px-3 font-semibold text-indigo-900">${item.brand} · ${item.model}</td>
+            <td class="py-2 px-3 text-slate-600">${item.spec}</td>
+            <td class="py-2 px-3 text-right font-bold text-slate-900">${item.qty}</td>
+          </tr>
+        `).join('');
+
+      // Populate Tab 4 Full BOM Table
+      let grandTotal = 0;
+      const fullBomBody = document.getElementById('fullBomBody');
+      fullBomBody.innerHTML = bom.map((item, idx) => {
+        const subTotal = item.qty * item.unitPrice;
+        grandTotal += subTotal;
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 text-slate-500">${idx + 1}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">${item.sys}</td>
+            <td class="py-2.5 px-3 font-semibold text-blue-800">${item.brand}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-900">${item.model}</td>
+            <td class="py-2.5 px-3 text-slate-600">${item.spec}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-slate-900">${item.qty}</td>
+            <td class="py-2.5 px-3 text-right text-slate-600">¥ ${item.unitPrice.toLocaleString()}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-blue-700">¥ ${subTotal.toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+      document.getElementById('bomGrandTotal').textContent = '¥ ' + grandTotal.toLocaleString();
+    }
+
+    function exportCsv() {
+      const headers = ['序号', '分项系统', '品牌', '设备型号', '核心技术参数', '数量', '参考单价(元)', '小计金额(元)'];
+      const rows = state.bomItems.map((item, idx) => [
+        idx + 1,
+        item.sys,
+        item.brand,
+        `"${item.model}"`,
+        `"${item.spec}"`,
+        item.qty,
+        item.unitPrice,
+        item.qty * item.unitPrice
+      ]);
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `智慧园区弱电智能化BOM配置报价单_${state.ipcCount}路监控.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✅ 已成功导出 Excel/CSV 格式 BOM 配置报价单！');
+    }
+
+    function copyProposalMarkdown() {
+      const text = `# 智慧园区弱电智能化系统初步技术方案书\n\n` +
+        `## 一、项目需求概述\n` +
+        `本项目规划建设前端高清视频监控点位 ${state.ipcCount} 路（保存周期 ${state.storeDays} 天）、多功能报告厅及 ${state.seewoRooms} 间智慧会议室显示系统、${state.sponZones} 分区 IP 公共广播系统及配套三层园区网络底座。\n\n` +
+        `## 二、各子系统选型与容量设计\n` +
+        `1. **华为数通园区网底座**：采用“核心层（S5735三层交换机）— 接入层（24口千兆PoE交换机）”架构，划分 VLAN 10（办公网）、VLAN 20（海康监控专网）、VLAN 30（多媒体与广播网），通过 VLANIF 路由与 ACL 策略保障监控视频大流量不冲击办公网。\n` +
+        `2. **海康威视智能安防系统**：遵循 H.265 编码标准，配置 ${state.ipcCount} 路高清 IPC 及 ${state.diskSize}TB 监控级硬盘，满足 ${state.storeDays} 天全天候录像存储与 10% 冗余要求。\n` +
+        `3. **洲明 LED 与希沃智慧会议系统**：大型报告厅采用洲明 P${state.ledPitch} 小间距 LED 拼接屏，中小型会议室配置 ${state.seewoRooms} 台希沃交互平板，兼顾视觉体验与成本控制。\n` +
+        `4. **世邦 IP 网络广播系统**：按 ${state.sponZones} 个物理分区配置吸顶音箱与 1.5 倍冗余定压功放，支持日常背景音乐与消防报警强切联动。`;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('📋 已复制《初步技术方案书》全文到剪贴板！');
+      } catch (e) {
+        showToast('复制完成');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // Event Bindings
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(b => {
+          b.classList.remove('tab-btn-active');
+          b.classList.add('text-slate-600');
+        });
+        btn.classList.add('tab-btn-active');
+        btn.classList.remove('text-slate-600');
+
+        const target = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+          panel.classList.toggle('hidden', panel.id !== target);
+        });
+      });
+    });
+
+    ['ipcCount', 'ipcRes', 'ipcCodec', 'storeDays', 'diskSize', 'ptzRatio', 'maxDist', 'roomType', 'roomArea', 'ledPitch', 'seewoRooms', 'sponZones'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', () => {
+        state[id] = isNaN(Number(el.value)) ? el.value : Number(el.value);
+        calculateAll();
+      });
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.getAttribute('data-preset');
+        if (p === 'small') {
+          state.ipcCount = 16; state.storeDays = 30; state.roomArea = 60; state.roomType = 'meeting';
+        } else if (p === 'medium') {
+          state.ipcCount = 32; state.storeDays = 30; state.roomArea = 120; state.roomType = 'hall';
+        } else if (p === 'large') {
+          state.ipcCount = 64; state.storeDays = 60; state.roomArea = 260; state.roomType = 'hall';
+        }
+        document.getElementById('ipcCount').value = state.ipcCount;
+        document.getElementById('storeDays').value = state.storeDays;
+        document.getElementById('roomArea').value = state.roomArea;
+        document.getElementById('roomType').value = state.roomType;
+        calculateAll();
+        showToast('✨ 已切换预设项目场景并重新核算配单！');
+      });
+    });
+
+    document.querySelectorAll('.topo-node').forEach(node => {
+      node.addEventListener('click', () => {
+        const key = node.getAttribute('data-node');
+        document.getElementById('topoDetailBox').innerHTML = topoDescriptions[key] || '';
+      });
+    });
+
+    document.getElementById('chkLayerIpc').addEventListener('change', (e) => {
+      document.getElementById('cad-ipc').style.display = e.target.checked ? 'block' : 'none';
+    });
+    document.getElementById('chkLayerAv').addEventListener('change', (e) => {
+      document.getElementById('cad-av').style.display = e.target.checked ? 'block' : 'none';
+    });
+    document.getElementById('chkLayerCable').addEventListener('change', (e) => {
+      document.getElementById('cad-cable').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('btnQuickExportCsv').addEventListener('click', exportCsv);
+    document.getElementById('btnCopyProposal').addEventListener('click', copyProposalMarkdown);
+
+    document.getElementById('btnOpenGuide').addEventListener('click', () => {
+      const m = document.getElementById('guideModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    });
+    document.getElementById('btnCloseGuide').addEventListener('click', () => {
+      const m = document.getElementById('guideModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    });
+
+    window.addEventListener('DOMContentLoaded', calculateAll);
+  </script>
+</body>
+</html>
